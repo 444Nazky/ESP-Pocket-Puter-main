@@ -1,0 +1,68 @@
+name: PlatformIO Auto Release
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.platformio
+          key: ${{ runner.os }}-pio-${{ hashFiles('platformio.ini') }}
+          restore-keys: |
+            ${{ runner.os }}-pio-
+
+      - name: Install PlatformIO
+        run: |
+          pip install -U platformio
+          pio update
+
+      - name: Build firmware
+        run: pio run
+
+      - name: Prepare firmware output
+        run: |
+          mkdir -p output
+          cp $(find .pio/build -name firmware.bin) output/ || echo "⚠️ No firmware files found"
+          ls -lh output || true
+
+      - name: Auto increment release tag
+        id: tag
+        run: |
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Latest tag: $latest_tag"
+          base=${latest_tag#v}
+          IFS='.' read -r major minor patch <<< "$base"
+          new_tag="v$major.$minor.$((patch+1))"
+          echo "new_tag=$new_tag" >> $GITHUB_ENV
+          echo "Next tag: $new_tag"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.new_tag }}
+          name: "Auto Release ${{ env.new_tag }}"
+          generate_release_notes: true
+          files: output/*.bin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
