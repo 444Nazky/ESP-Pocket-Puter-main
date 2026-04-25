@@ -59,7 +59,7 @@ A compact **ESP32-based Flipper Zero alternative** with a display, buttons, buzz
 
 1. Clone the repo:
    ```bash
-   git clone https://github.com/DevEclipse1/ESP-Pocket-Puter.git
+   git clone https://github.com/444Nazky/ESP-Pocket-Puter-main
    cd ESP-Pocket-Puter
    ```
 2. Install platformio for vscode if you havent already
